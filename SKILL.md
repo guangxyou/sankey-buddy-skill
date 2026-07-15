@@ -1,6 +1,8 @@
 ---
 name: sankey-buddy-skill
 description: Upload financial reports to SankeyBuddy, extract and validate reported financial flows, and return finished SVG and PNG Sankey charts. Use when the user asks to turn a PDF, HTML, Excel, CSV, Word, text, or Markdown financial report into a financial Sankey, income-statement flow chart, 财务桑基图, 利润表资金流向图, or revenue-to-profit visualization. Supports Chinese and English output.
+metadata:
+  version: 0.1.0
 ---
 
 # SankeyBuddy
