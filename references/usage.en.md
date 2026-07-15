@@ -44,12 +44,12 @@ Chinese and English messages plus a machine-readable error code.
 
 ### Apple
 
-![Apple financial Sankey](https://raw.githubusercontent.com/guangxyou/sankey-buddy-skill/main/assets/apple-q2-2026.png)
+![Apple financial Sankey](../assets/apple-q2-2026.png)
 
 ### Tencent
 
-![Tencent financial Sankey](https://raw.githubusercontent.com/guangxyou/sankey-buddy-skill/main/assets/tencent-q1-2026.png)
+![Tencent financial Sankey](../assets/tencent-q1-2026.png)
 
 ### Kweichow Moutai
 
-![Kweichow Moutai financial Sankey](https://raw.githubusercontent.com/guangxyou/sankey-buddy-skill/main/assets/maotai-2026-q1.png)
+![Kweichow Moutai financial Sankey](../assets/maotai-2026-q1.png)
