@@ -13,7 +13,10 @@ validation, or rendering logic locally.
 1. Confirm that the user supplied one supported report file. Do not upload unrelated
    documents or files containing secrets.
 2. Choose the output language only when the user specifies it; otherwise use `auto`.
-3. Run the bundled client:
+3. Use Python 3.9 or newer. Prefer `python3`; if unavailable, try `python` or
+   `py -3`. If no compatible interpreter exists, report the prerequisite instead of
+   installing system software without permission.
+4. Run the bundled client:
 
 ```bash
 SKILL_DIR="/absolute/path/to/sankey-buddy-skill"
@@ -27,39 +30,21 @@ python3 "$SKILL_DIR/scripts/sankey_buddy.py" \
 Resolve `SKILL_DIR` as the directory containing this `SKILL.md`; installation paths
 vary by agent platform. Do not copy the script elsewhere.
 
-4. Relay meaningful progress messages emitted by the client: version check, upload,
-   extraction and validation, SVG save, PNG rendering, and completion.
-5. Treat the final JSON printed to stdout as authoritative. A run succeeds only when
+5. Relay meaningful progress messages emitted by the client: upload, extraction and
+   validation, SVG save, PNG generation, fallback when needed, and completion.
+6. Treat the final JSON printed to stdout as authoritative. A run succeeds only when
    both reported `outputs.svg` and `outputs.png` exist and are non-empty.
-6. Return clickable links to the SVG and PNG. Briefly mention warnings, source-report
+7. Return clickable links to the SVG and PNG. Briefly mention warnings, source-report
    limitations, or simplified fallback extraction when present.
-
-## Version and billing behavior
-
-- Check the service manifest before every upload. The client does this automatically.
-- Respect marketplace-managed updates. WorkBuddy, SkillHub, and ClawHub builds notify
-  the user and let the marketplace update the package.
-- For direct or Xiaohongshu-distributed builds, use the manifest policy. `next-run`
-  stages a verified update after this job and applies it on the next invocation;
-  `auto` applies it before processing the report. Never install an archive without a
-  matching SHA-256 digest.
-- The current beta is free. Still send the anonymous install ID and distribution
-  channel so demand can be measured. Never fabricate, expose, or request an API key.
-- If a future response says payment is required, stop and explain the quoted price or
-  required credits before asking the user to authorize a purchase.
 
 ## Failure rules
 
 - On `422`, explain that the report could not produce a conserved financial graph;
   suggest a full statutory report or a clearer income statement. Do not invent data.
 - On unsupported type or size errors, report the exact limit from the client.
-- If SVG succeeds but local PNG rendering fails, preserve and return the SVG, explain
-  that Chrome/Chromium is required, and do not claim complete PNG delivery.
-- Never retry a billable request automatically. During the free beta, retry network
-  timeouts at most once when the client explicitly reports that no result was created.
+- If local PNG rendering is unavailable or fails, allow the client to use the hosted
+  PNG fallback. Preserve the SVG if both PNG paths fail.
 
 Read [references/usage.zh-CN.md](references/usage.zh-CN.md) for Chinese usage,
 [references/usage.en.md](references/usage.en.md) for English usage, and
 [references/output-examples.md](references/output-examples.md) when showing examples.
-Read [references/privacy.md](references/privacy.md) before answering privacy or data
-retention questions.

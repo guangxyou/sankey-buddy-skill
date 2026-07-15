@@ -5,14 +5,9 @@
   "version": "0.1.0",
   "license": "proprietary-beta",
   "protocol_version": 1,
-  "channel": "direct",
+  "channel": "github",
   "api_base": "https://xslaoxu.cn/sankey",
   "update_policy": "next-run",
-  "billing": {
-    "mode": "free-beta",
-    "enabled": false,
-    "future_unit": "successful-chart"
-  },
   "supported_inputs": [
     ".pdf",
     ".html",

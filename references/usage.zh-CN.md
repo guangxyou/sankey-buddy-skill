@@ -3,7 +3,7 @@
 ## 功能
 
 上传一份公司财报，由 SankeyBuddy 服务完成财务数据提取、资金守恒校验、
-图表质量检查和渲染，最终输出 SVG 与 1920×1200 PNG。
+图表质量检查和渲染，最终输出 SVG 与 PNG。
 
 支持 PDF、HTML、Excel、CSV、Word、TXT 和 Markdown，单文件不超过 20 MB。
 
@@ -22,29 +22,18 @@ python3 scripts/sankey_buddy.py 财报.pdf \
   --unit 亿
 ```
 
-仅检查版本：
+需要 Python 3.9 或更高版本。可依次尝试 `python3`、`python` 或 Windows 的
+`py -3`；Skill 仅使用 Python 标准库。
 
-```bash
-python3 scripts/sankey_buddy.py --check-version
-```
+## 运行提示
 
-直接安装包默认采用“下次生效”升级策略。若希望当前任务开始前自动升级：
-
-```bash
-python3 scripts/sankey_buddy.py 财报.pdf --out-dir output --update-policy auto
-```
-
-## 隐私与计费
-
-- 财报会上传到 SankeyBuddy 服务处理；服务当前按现有产品策略在内存中处理文件。
-- 客户端会发送 Skill 版本、分发渠道和随机匿名安装 ID，用于判断需求来源和版本分布。
-- 不发送用户名、设备名或本地目录。服务端只保存匿名安装 ID 的哈希摘要。
-- 当前 Beta 免费，不扣次数。接口已预留“成功生成一张图”为未来计费单位。
-- SankeyBuddy 生成结果用于数据可视化，不构成投资、审计或会计意见；重要数字应回查原始财报。
+正常运行会依次提示：上传财报、提取并校验财务数据、SVG 已生成、本地生成
+PNG 或切换服务端兜底，以及 SVG/PNG 全部完成。发生错误时会同时输出中文、
+英文错误信息和机器可读错误代码。
 
 ## 常见问题
 
 - `INVALID_SANKEY_GRAPH`：财报无法构建守恒资金流，优先换完整年度/季度报告。
 - `FILE_TOO_LARGE`：文件超过 20 MB。
-- `PNG_RENDERER_NOT_FOUND`：安装 Chrome/Chromium，或通过 `--chrome` 指定路径。
-- 只有 SVG 没有 PNG：SVG 可以保留使用，但任务尚未满足完整交付要求。
+- 本地没有 Chrome/Chromium：客户端会自动改用服务端生成 PNG。
+- 本地 PNG 生成失败：客户端会提示正在切换服务端兜底。

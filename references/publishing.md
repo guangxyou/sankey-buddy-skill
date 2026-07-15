@@ -1,59 +1,9 @@
-# Publishing notes
+# 当前版本功能 / Current release
 
-Checked on 2026-07-14.
+## 中文
 
-## Portable base package
+SankeyBuddy 接收 PDF、HTML、Excel、CSV、Word、TXT 或 Markdown 财报，调用托管服务提取并校验财务数据，输出 SVG 和 PNG 桑基图。客户端优先在本地生成 PNG，本地不具备条件或生成失败时自动使用服务端兜底。支持中英文标签、自动或指定金额单位，并记录运行平台与安装渠道。
 
-Use the open Agent Skills layout: one directory whose required entry point is
-`SKILL.md`, with optional `scripts/`, `references/`, and `assets/`. Keep the directory
-and frontmatter name as `sankey-buddy-skill`; use `SankeyBuddy` only as the display name.
+## English
 
-- Agent Skills specification: https://agentskills.io/specification
-- Reference implementation: https://github.com/agentskills/agentskills
-
-## WorkBuddy
-
-WorkBuddy exposes community and official Skills, shows version and author, supports
-updates, and performs a security scan before installation. Marketplace builds should
-therefore use channel `workbuddy`, update policy `notify`, no embedded secrets, and a
-minimal standard-library client.
-
-- Marketplace: https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Skills-Market
-- Custom Skills: https://www.workbuddy.ai/docs/workbuddy/From-Beginner-to-Expert-Guide/Practice-Cases/Create-Skills
-
-The current WorkBuddy custom-Skill page describes a product-specific `skill.yml`, while
-its wider ecosystem also consumes Agent Skills-style packages. Keep the portable
-`SKILL.md` package as the source of truth and generate a product adapter only when the
-actual publisher form requires it.
-
-## SkillHub
-
-SkillHub accepts creator uploads and applies quality and security checks. Publish the
-channel-specific ZIP with channel `skillhub`, complete bilingual usage, deterministic
-outputs, and no credentials. Use semantic versions and keep old releases available for
-rollback.
-
-- Platform overview: https://skillhub.cn/about
-- Publishing/community entry: https://skillhub.cn/tutorials
-
-## Xiaohongshu
-
-No official general-purpose `SKILL.md` runtime or Skill marketplace specification was
-found. Treat Xiaohongshu as the content, demand-testing, and transaction channel rather
-than a separate runtime format. Use a channel-specific direct ZIP marked
-`xiaohongshu`; demonstrate real before/after charts, disclose that uploaded reports are
-processed by a hosted service, and keep transactions inside the compliant shop flow
-when selling later.
-
-- Merchant onboarding: https://zhaoshang.xiaohongshu.com/
-- Ecommerce: https://ec.xiaohongshu.com/ecommerce/home
-
-## International distribution
-
-Use the same Agent Skills package for GitHub, Claude-compatible clients, Codex,
-Microsoft Agent Framework, and other compatible agents. ClawHub or marketplace-managed
-packages should use notification-only updates; GitHub/direct packages can stage a
-verified archive for the next run.
-
-Do not claim universal automatic installation: the Agent Skills standard defines the
-skill contents, not a single cross-platform distribution or update mechanism.
+SankeyBuddy accepts financial reports in PDF, HTML, Excel, CSV, Word, TXT, or Markdown format. The hosted service extracts and validates financial flows and returns SVG and PNG Sankey charts. PNG generation runs locally when supported and automatically falls back to the hosted renderer when local generation is unavailable or fails. Chinese and English labels, automatic or selected units, runtime-platform attribution, and distribution-channel attribution are supported.

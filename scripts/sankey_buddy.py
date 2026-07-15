@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Portable SankeyBuddy client: version check, upload, SVG save, PNG export."""
+"""Portable SankeyBuddy client: upload, SVG save, and resilient PNG export."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
-import struct
 import subprocess
 import sys
 import tempfile
@@ -70,9 +70,25 @@ def install_id() -> str:
         return value
     except (OSError, ValueError):
         value = str(uuid.uuid4())
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(value + "\n", encoding="utf-8")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(value + "\n", encoding="utf-8")
+        except OSError:
+            pass
         return value
+
+
+def detect_platform(manifest: dict[str, Any], explicit: str | None) -> str:
+    configured = explicit or os.environ.get("SANKEY_BUDDY_PLATFORM")
+    if configured:
+        return configured.strip().lower()
+    if os.environ.get("CLAUDECODE") == "1":
+        return "claude"
+    if any(os.environ.get(name) for name in ("CODEX_THREAD_ID", "CODEX_CI", "CODEX_HOME")):
+        return "codex"
+    if any(name.startswith(("WORKBUDDY_", "CODEBUDDY_")) for name in os.environ):
+        return "workbuddy"
+    return str(manifest.get("channel") or "direct").strip().lower()
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
@@ -113,6 +129,7 @@ def client_headers(manifest: dict[str, Any], platform: str) -> dict[str, str]:
         "User-Agent": f"SankeyBuddy/{manifest['version']}",
         "X-SankeyBuddy-Version": str(manifest["version"]),
         "X-SankeyBuddy-Platform": platform,
+        "X-SankeyBuddy-Channel": str(manifest.get("channel") or "direct"),
         "X-SankeyBuddy-Install-ID": install_id(),
         "X-SankeyBuddy-Protocol": str(manifest.get("protocol_version", 1)),
     }
@@ -125,7 +142,6 @@ def client_headers(manifest: dict[str, Any], platform: str) -> dict[str, str]:
 def check_version(
     api_base: str, manifest: dict[str, Any], platform: str, timeout: int
 ) -> dict[str, Any]:
-    emit("version-check", "正在检查 SankeyBuddy 版本", "Checking SankeyBuddy version")
     query = urllib.parse.urlencode(
         {"current_version": manifest["version"], "platform": platform}
     )
@@ -137,9 +153,9 @@ def check_version(
         remote = request_json(request, timeout)
     except SankeyBuddyError as exc:
         emit(
-            "version-check-unavailable",
-            "暂时无法读取远程版本清单，将使用已安装版本继续",
-            "The remote version manifest is unavailable; continuing with the installed version",
+            "service-check-unavailable",
+            "暂时无法读取服务状态，将继续处理当前任务",
+            "The service status is unavailable; continuing with the current task",
             warning=str(exc),
         )
         return {
@@ -155,7 +171,6 @@ def check_version(
                 "url": None,
                 "sha256": None,
             },
-            "billing": manifest.get("billing", {"mode": "free-beta", "enabled": False}),
             "warning": str(exc),
         }
     update = remote.get("update") if isinstance(remote.get("update"), dict) else {}
@@ -167,8 +182,6 @@ def check_version(
             required=bool(update.get("required")),
             policy=update.get("policy"),
         )
-    else:
-        emit("version-current", "当前已是最新版本", "SankeyBuddy is up to date")
     return remote
 
 
@@ -327,12 +340,14 @@ def chrome_path(explicit: str | None) -> str | None:
     return next((str(value) for value in candidates if value and Path(value).is_file()), None)
 
 
-def png_size(path: Path) -> tuple[int, int]:
-    with path.open("rb") as handle:
-        header = handle.read(24)
-    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n":
-        raise SankeyBuddyError("PNG_RENDER_FAILED: invalid PNG output")
-    return struct.unpack(">II", header[16:24])
+def svg_dimensions(svg: str) -> tuple[int, int]:
+    match = re.search(r'viewBox=["\']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)', svg)
+    if not match:
+        return (1600, 1000)
+    return (
+        max(1, min(8192, round(float(match.group(1))))),
+        max(1, min(8192, round(float(match.group(2))))),
+    )
 
 
 def render_png(svg: str, png_path: Path, chrome: str | None, timeout: int) -> str:
@@ -341,10 +356,11 @@ def render_png(svg: str, png_path: Path, chrome: str | None, timeout: int) -> st
         raise SankeyBuddyError(
             "PNG_RENDERER_NOT_FOUND: install Chrome/Chromium or pass --chrome PATH"
         )
+    width, height = svg_dimensions(svg)
     html = (
         "<!doctype html><meta charset='utf-8'><style>"
-        "html,body{margin:0;width:1920px;height:1200px;overflow:hidden;background:#fff}"
-        "svg{display:block;width:1920px;height:1200px}</style>" + svg
+        f"html,body{{margin:0;width:{width}px;height:{height}px;overflow:hidden;background:#fff}}"
+        f"svg{{display:block;width:{width}px;height:{height}px}}</style>" + svg
     )
     with tempfile.TemporaryDirectory(prefix="sankey-buddy-png-") as tmp:
         tmp_path = Path(tmp)
@@ -358,7 +374,7 @@ def render_png(svg: str, png_path: Path, chrome: str | None, timeout: int) -> st
             "--hide-scrollbars",
             "--no-first-run",
             f"--user-data-dir={profile_path}",
-            "--window-size=1920,1200",
+            f"--window-size={width},{height}",
             "--force-device-scale-factor=1",
             "--virtual-time-budget=3000",
             f"--screenshot={png_path}",
@@ -396,10 +412,45 @@ def render_png(svg: str, png_path: Path, chrome: str | None, timeout: int) -> st
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     pass
-    width, height = png_size(png_path)
-    if (width, height) != (1920, 1200):
-        raise SankeyBuddyError(f"PNG_RENDER_FAILED: expected 1920x1200, got {width}x{height}")
-    return "chrome-cli"
+    if png_path.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
+        raise SankeyBuddyError("PNG_RENDER_FAILED: invalid PNG output")
+    return "local"
+
+
+def render_png_server(
+    api_base: str,
+    manifest: dict[str, Any],
+    platform: str,
+    document: Any,
+    png_path: Path,
+    timeout: int,
+) -> str:
+    if not isinstance(document, dict):
+        raise SankeyBuddyError("INVALID_SERVER_RESPONSE: chart document is missing")
+    request = urllib.request.Request(
+        f"{api_base.rstrip('/')}/api/render/png",
+        data=json.dumps(document, ensure_ascii=False).encode("utf-8"),
+        headers={
+            **client_headers(manifest, platform),
+            "Accept": "image/png",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            png = response.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise SankeyBuddyError(f"SERVER_PNG_FAILED: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise SankeyBuddyError(f"SERVER_PNG_FAILED: {exc.reason}") from exc
+    if png[:8] != b"\x89PNG\r\n\x1a\n":
+        raise SankeyBuddyError("SERVER_PNG_FAILED: invalid PNG output")
+    temporary = png_path.with_suffix(png_path.suffix + ".tmp")
+    temporary.write_bytes(png)
+    os.replace(temporary, png_path)
+    return "server"
 
 
 def safe_stem(path: Path) -> str:
@@ -416,32 +467,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--name", help="output basename")
     parser.add_argument("--language", choices=["auto", "zh", "en"], default="auto")
     parser.add_argument("--unit", choices=["auto", "B", "亿"], default="auto")
-    parser.add_argument("--platform", help="distribution channel override")
+    parser.add_argument("--platform", help="runtime agent platform override")
     parser.add_argument("--api-base", help="SankeyBuddy service base URL")
-    parser.add_argument(
-        "--update-policy", choices=["notify", "next-run", "auto", "off"],
-        help="override the package or service update policy",
-    )
-    parser.add_argument("--check-version", action="store_true", help="check version and exit")
     parser.add_argument("--chrome", help="Chrome/Chromium executable")
     parser.add_argument("--api-timeout", type=int, default=600)
     parser.add_argument("--png-timeout", type=int, default=45)
-    parser.add_argument("--version", action="store_true")
     return parser.parse_args()
 
 
 def main() -> None:
-    apply_pending_update()
+    try:
+        apply_pending_update()
+    except (OSError, SankeyBuddyError) as exc:
+        emit(
+            "update-skipped",
+            "当前环境无法应用升级，将继续使用现有版本",
+            "The update could not be applied in this environment; continuing with the installed release",
+            warning=str(exc),
+        )
     args = parse_args()
     manifest = load_json(LOCAL_MANIFEST)
-    if args.version:
-        print(manifest["version"])
-        return
-    platform = (
-        args.platform
-        or os.environ.get("SANKEY_BUDDY_PLATFORM")
-        or str(manifest.get("channel") or "direct")
-    ).strip().lower()
+    platform = detect_platform(manifest, args.platform)
     api_base = (
         args.api_base
         or os.environ.get("SANKEY_BUDDY_API_BASE")
@@ -449,14 +495,19 @@ def main() -> None:
     ).rstrip("/")
     remote = check_version(api_base, manifest, platform, min(args.api_timeout, 30))
     update = remote.get("update") if isinstance(remote.get("update"), dict) else {}
-    policy = args.update_policy or str(update.get("policy") or manifest.get("update_policy") or "notify")
+    policy = str(update.get("policy") or manifest.get("update_policy") or "notify")
     if update.get("available") and policy in {"next-run", "auto"}:
-        staged = stage_update(remote)
-        if staged and policy == "auto":
-            apply_pending_update()
-    if args.check_version:
-        print(json.dumps(remote, ensure_ascii=False, indent=2))
-        return
+        try:
+            staged = stage_update(remote)
+            if staged and policy == "auto":
+                apply_pending_update()
+        except (OSError, SankeyBuddyError) as exc:
+            emit(
+                "update-skipped",
+                "当前环境无法准备升级，将继续处理当前任务",
+                "The update could not be prepared in this environment; continuing with the current task",
+                warning=str(exc),
+            )
     if not args.file:
         raise SankeyBuddyError("MISSING_FILE: pass a financial report file")
     source = Path(args.file).expanduser().resolve()
@@ -479,22 +530,51 @@ def main() -> None:
     png_path = out_dir / f"{stem}.png"
     svg_path.write_text(svg, encoding="utf-8")
     emit("svg-saved", "SVG 已生成", "SVG created", path=str(svg_path))
-    emit("png-render", "正在生成 1920×1200 PNG", "Rendering 1920×1200 PNG")
-    renderer = render_png(svg, png_path, args.chrome, args.png_timeout)
+    executable = chrome_path(args.chrome)
+    if executable:
+        emit("png-local", "正在本地生成 PNG", "Rendering PNG locally")
+        try:
+            renderer = render_png(svg, png_path, executable, args.png_timeout)
+        except SankeyBuddyError as exc:
+            emit(
+                "png-server-fallback",
+                "本地生成失败，正在切换服务端生成 PNG",
+                "Local rendering failed; switching to hosted PNG generation",
+                warning=str(exc),
+            )
+            renderer = render_png_server(
+                api_base,
+                manifest,
+                platform,
+                result.get("document"),
+                png_path,
+                args.api_timeout,
+            )
+    else:
+        emit(
+            "png-server-fallback",
+            "本地未检测到 PNG 生成环境，正在使用服务端生成",
+            "No local PNG renderer was detected; using hosted generation",
+        )
+        renderer = render_png_server(
+            api_base,
+            manifest,
+            platform,
+            result.get("document"),
+            png_path,
+            args.api_timeout,
+        )
     emit("complete", "SVG 和 PNG 已生成", "SVG and PNG are ready")
     output = {
         "ok": True,
         "skill": "SankeyBuddy",
-        "version": manifest["version"],
         "platform": platform,
-        "source": str(source),
+        "channel": str(manifest.get("channel") or "direct"),
         "outputs": {"svg": str(svg_path), "png": str(png_path)},
         "png_renderer": renderer,
         "stats": result.get("stats", {}),
         "warnings": result.get("warnings", []),
-        "request": result.get("meta", {}),
-        "update": remote.get("update", {}),
-        "billing": (result.get("meta") or {}).get("billing", remote.get("billing", {})),
+        "request_id": (result.get("meta") or {}).get("request_id"),
     }
     print(json.dumps(output, ensure_ascii=False, indent=2))
 

@@ -18,20 +18,15 @@ Final client response shape:
 {
   "ok": true,
   "skill": "SankeyBuddy",
-  "version": "0.1.0",
   "platform": "skillhub",
+  "channel": "skillhub",
   "outputs": {
     "svg": "/absolute/path/output/贵州茅台-2026Q1.svg",
     "png": "/absolute/path/output/贵州茅台-2026Q1.png"
   },
+  "png_renderer": "local",
   "stats": { "nodes": 16, "flows": 15 },
-  "warnings": [],
-  "billing": {
-    "mode": "free-beta",
-    "charged": false,
-    "units": 0,
-    "future_unit": "successful-chart"
-  }
+  "warnings": []
 }
 ```
 
@@ -42,3 +37,17 @@ Final client response shape:
 
 The response follows the same shape. The report determines the company and reporting
 period; do not guess either value from the filename when the filing says otherwise.
+
+## Website examples
+
+### Apple
+
+![Apple financial Sankey](../assets/apple-q2-2026.png)
+
+### Tencent
+
+![Tencent financial Sankey](../assets/tencent-q1-2026.png)
+
+### 贵州茅台
+
+![贵州茅台财务桑基图](../assets/maotai-2026-q1.png)
