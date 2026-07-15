@@ -1,0 +1,4 @@
+interface:
+  display_name: "SankeyBuddy"
+  short_description: "Turn financial reports into verified Sankey charts"
+  default_prompt: "Use $sankey-buddy-skill to turn this financial report into verified SVG and PNG Sankey charts."

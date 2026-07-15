@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "name": "sankey-buddy-skill",
+  "display_name": "SankeyBuddy",
+  "version": "0.1.0",
+  "license": "proprietary-beta",
+  "protocol_version": 1,
+  "channel": "direct",
+  "api_base": "https://xslaoxu.cn/sankey",
+  "update_policy": "next-run",
+  "billing": {
+    "mode": "free-beta",
+    "enabled": false,
+    "future_unit": "successful-chart"
+  },
+  "supported_inputs": [
+    ".pdf",
+    ".html",
+    ".htm",
+    ".csv",
+    ".tsv",
+    ".xls",
+    ".xlsx",
+    ".doc",
+    ".docx",
+    ".txt",
+    ".md"
+  ],
+  "outputs": ["svg", "png"]
+}
