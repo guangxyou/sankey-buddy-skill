@@ -38,16 +38,16 @@ Final client response shape:
 The response follows the same shape. The report determines the company and reporting
 period; do not guess either value from the filename when the filing says otherwise.
 
-## Website examples
+## Examples
 
 ### Apple
 
-![Apple financial Sankey](../assets/apple-q2-2026.png)
+![Apple financial Sankey](https://raw.githubusercontent.com/guangxyou/sankey-buddy-skill/main/assets/apple-q2-2026.png)
 
 ### Tencent
 
-![Tencent financial Sankey](../assets/tencent-q1-2026.png)
+![Tencent financial Sankey](https://raw.githubusercontent.com/guangxyou/sankey-buddy-skill/main/assets/tencent-q1-2026.png)
 
 ### 贵州茅台
 
-![贵州茅台财务桑基图](../assets/maotai-2026-q1.png)
+![贵州茅台财务桑基图](https://raw.githubusercontent.com/guangxyou/sankey-buddy-skill/main/assets/maotai-2026-q1.png)

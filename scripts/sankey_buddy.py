@@ -246,6 +246,8 @@ def apply_pending_update() -> bool:
         PENDING_UPDATE.unlink(missing_ok=True)
         raise SankeyBuddyError("PENDING_UPDATE_INVALID: archive missing or changed")
     emit("update-apply", "正在应用已验证的升级", "Applying verified SankeyBuddy update")
+    installed_manifest = load_json(LOCAL_MANIFEST)
+    installed_channel = str(installed_manifest.get("channel") or "direct")
     parent = SKILL_DIR.parent
     with tempfile.TemporaryDirectory(prefix="sankey-buddy-update-", dir=parent) as tmp:
         extract_root = Path(tmp)
@@ -265,6 +267,10 @@ def apply_pending_update() -> bool:
         os.replace(SKILL_DIR, backup)
         try:
             shutil.copytree(candidate, SKILL_DIR)
+            applied_manifest_path = SKILL_DIR / "manifest.json"
+            applied_manifest = load_json(applied_manifest_path)
+            applied_manifest["channel"] = installed_channel
+            save_json(applied_manifest_path, applied_manifest)
         except Exception:
             if SKILL_DIR.exists():
                 shutil.rmtree(SKILL_DIR)
@@ -328,12 +334,23 @@ def upload_report(
 
 
 def chrome_path(explicit: str | None) -> str | None:
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    program_files = os.environ.get("PROGRAMFILES")
+    program_files_x86 = os.environ.get("PROGRAMFILES(X86)")
     candidates = [
         explicit,
         os.environ.get("CHROME_PATH"),
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
         "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
         "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        str(Path(local_app_data) / "Google/Chrome/Application/chrome.exe")
+        if local_app_data else None,
+        str(Path(program_files) / "Google/Chrome/Application/chrome.exe")
+        if program_files else None,
+        str(Path(program_files_x86) / "Google/Chrome/Application/chrome.exe")
+        if program_files_x86 else None,
+        str(Path(program_files) / "Microsoft/Edge/Application/msedge.exe")
+        if program_files else None,
     ]
     for name in ("google-chrome", "chromium", "chromium-browser", "chrome", "microsoft-edge"):
         candidates.append(shutil.which(name))

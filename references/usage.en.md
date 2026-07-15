@@ -39,3 +39,17 @@ Chinese and English messages plus a machine-readable error code.
 - No local Chrome/Chromium: the client automatically uses hosted PNG generation.
 - Local PNG generation failed: the client reports that it is switching to the hosted
   fallback.
+
+## Examples
+
+### Apple
+
+![Apple financial Sankey](https://raw.githubusercontent.com/guangxyou/sankey-buddy-skill/main/assets/apple-q2-2026.png)
+
+### Tencent
+
+![Tencent financial Sankey](https://raw.githubusercontent.com/guangxyou/sankey-buddy-skill/main/assets/tencent-q1-2026.png)
+
+### Kweichow Moutai
+
+![Kweichow Moutai financial Sankey](https://raw.githubusercontent.com/guangxyou/sankey-buddy-skill/main/assets/maotai-2026-q1.png)
